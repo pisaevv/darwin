@@ -34,7 +34,7 @@ MIN_PANEL_MODELS = 5
 MIN_PANEL_MAKERS = 4
 
 REQUESTS_IN_FLIGHT = 12
-PANEL_MAX_TOKENS = 600
+PANEL_MAX_TOKENS = 1200
 
 # Time limits, in seconds
 PANEL_TIMEOUT = 120
@@ -76,3 +76,16 @@ SHARED_SITES = [
     "readthedocs.io", "medium.com", "substack.com", "reddit.com", "wikipedia.org",
     "youtube.com", "linkedin.com", "x.com", "twitter.com", "g2.com", "producthunt.com",
 ]
+
+# The evolution (Step 4, rewrite.py and evolve.py)
+REWRITER_EFFORT = "low"  # the reasoning_effort of a rewrite; None means: do not send it
+REWRITER_MAX_TOKENS = 3000  # thinking and page together
+REWRITE_TIMEOUT = 90  # seconds for one rewriter call
+CHECKER_EFFORT = "none"  # chosen by the Step 4 probe: with "low" the checker thought its 2000 tokens away
+CHECKER_MAX_TOKENS = 2000
+CHECK_TIMEOUT = 90  # seconds for one checker call
+CHILDREN = 4  # rewrites in one generation
+REASONS = 8  # the most reasons a rewriter is given
+FINAL_ORDERS = 3  # product orders in the final check
+FIRST_GENERATION_ESTIMATE = 0.45  # dollars: what generation 1 is expected to cost, before any has been measured
+ESTIMATE_MARGIN = 1.3  # what the measured costs are multiplied by in the budget rule
