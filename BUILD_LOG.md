@@ -254,3 +254,83 @@ The points D1 to D11 of PROMPT_3.md were followed. New ones:
   - run 2: $0.0619
 - Full runs: 2 of the 4 allowed.
 - The commits are on the branch `step-3`.
+
+## Step 5 (chart page, built while Steps 2 to 4 were still running)
+
+Written 2026-11-20. Everything here was tried with made-up data only. No real run has a `progress.json` yet, so the page has never shown a real result. This step called nothing that costs money.
+
+### How to see the page
+
+- In a terminal of its own: `.venv/bin/python web/serve.py`. Then open `http://127.0.0.1:8010`. Without a run in the address the page lists the runs to click on. A run's own address is `http://127.0.0.1:8010/web/chart.html?run=<run_id>`.
+- Never `python -m http.server` in this folder (D2 of PROMPT_5.md). It hands out every file here, `.env` with the keys included, to every computer on the same wifi. `web/serve.py` answers only this laptop (`127.0.0.1`) and only for `web/` and `runs/`. Tried: `/.env`, `/config.py`, `/web/../.env`, `/web/%2e%2e/%2eenv`, `/web/%2e%2e/config.py`, `/runs/%2e%2e/%2eenv` and `/BUILD_LOG.md` all give 404.
+- Files: `web/chart.html` (the page, one file), `web/chart.umd.js` (Chart.js 4.6.1, unchanged, SHA-256 `338399fb…f67fbf`), `web/serve.py`, `web/fake_run.py`.
+
+### The file the page reads (for Steps 4 and 6)
+
+The page reads `runs/<run_id>/progress.json` every 2 seconds, and the two page files it names. Nothing else. The shape is the one in PLAN.md section 8. How the page treats each field:
+
+| Field | What the page does with it | If missing, `null` or unusable |
+|---|---|---|
+| `run_id` | Shown in the top line. | The id from the address is shown. Listed at the bottom. |
+| `product` | The big name; also used in three sentences. | "our product". Listed. |
+| `status` | `running`, `finished`, `stopped_low_budget`, `stopped_by_budget` are put into words. Any other word is shown as it is. | "status unknown". Listed. |
+| `panel` | A list of model names. Gives the order of the per-model bars and the number in "from 6 open models". | The models are taken from `per_model_heldout`. Listed. |
+| `budget` | Needs `limit_usd` (above 0) and `used_usd`. `remaining_usd` is not read. | The budget part says "not in the file". Listed as `budget`, `budget.limit_usd` or `budget.used_usd`. |
+| `spend_by_role` | Cuts the filled part of the bar into one piece per role, in the file's order, with a line of labels. If the roles add up to at least a cent less than `used_usd`, a grey piece "other". | The bar has one piece. Not listed. |
+| `generations` | One entry per finished generation, generation 0 first. | Same as an empty list: "Waiting for the first result." Listed only if it is not a list. |
+| `gen` | The generation's number on the chart and in the table. | The entry's place in the list. Listed. |
+| `champion` | The id of the best page at the end of that generation. | Shown as "?". Counts as a new page for the held-out rule below. Listed. |
+| `train_share`, `heldout_share` | A fraction from 0 to 1. | No point; the table says "n/a" (but see the held-out rule). Listed. A value above 1 or below 0 is treated the same way. |
+| `children_made`, `children_dropped`, `no_votes`, `cost_usd` | Shown in the table. | "n/a". Listed. |
+| `rewriter_model` | A "written by" column, shown only if at least one generation has one. | "–" in that row. Not listed. |
+| `per_model_heldout` | For each model a pair `[votes for us, valid votes]`. The **last** generation's pairs make the per-model bars ("5 of 8"). The sum of the second numbers is the number of votes in the sentence about luck. | "not measured for this page". Listed. A pair that is not two numbers with the first no larger than the second is left out and listed. |
+| `original_page`, `champion_page` | A path counted from the run's folder. Used only if it has no `..`, no `:` and no `/` at its start. The original is fetched once, the best page again when the path changes. | That column says "not in the file" (or "cannot read <path>" if the file is not there). Listed. |
+| `final` | `original_share`, `champion_share`, `votes_each`. When all three are usable, they become the two big numbers. | `null` or missing: no final check yet, not listed. Present but incomplete: treated as no final check, and the bad field is listed (`final.votes_each`). |
+
+The held-out rule (D5): a generation's held-out value is its `heldout_share`. If that is `null` and its `champion` is the same as the generation before, the value of the generation before is used (the line stays level). If the `champion` is new and has no number, there is no value and the thick line stops.
+
+Numbers may arrive as text (`"0.09"`); only finite numbers are accepted. A missing or wrong field never stops the page. The grey line at the very bottom, "Not found in progress.json: …", names every field the page wanted and did not get. **After Step 4's first real run, read that line.** If it is not there, the file fits.
+
+What the page needs from the program that writes the file (`evolve.py`). `web/fake_run.py` behaves this way:
+
+1. The whole file is written anew each time: under another name in the same folder, then renamed onto `progress.json` (`os.replace`). The page then never meets half a file.
+2. It is written for the first time as soon as the run folder exists: `status` `running`, an empty `generations` list, the budget of that moment, both page paths `pages/g0.md`. Then after every generation, and a last time with the final status. Without the first write the page can only say "No progress.json … yet" in the first minutes.
+3. Shares are fractions from 0 to 1, or `null` if there was no valid vote. Not per cent.
+4. Every entry of `generations` describes the best page at the end of that generation. If the best page did not change, its stored numbers are written again (or `heldout_share` is `null` and `champion` is the same id; the page then keeps the line level).
+5. A page file exists before a `progress.json` that names it is written.
+6. Numbers are JSON numbers.
+7. The last write carries the final status. A run stopped by hand keeps saying `running`; the page shows when the file last changed ("last update 14:32:07 (35 s ago)"), which tells the truth.
+
+### For Step 6
+
+The page already shows `spend_by_role` (the pieces of the budget bar) and `rewriter_model` (the "written by" column) when the file has them, and hides both when it does not. Step 6 writes the two fields into `progress.json` and does not need to edit the page. `rewriter_model` is shown as written; a `nebius:` in front is not removed there.
+
+### Made-up data
+
+- Everything was tried with made-up runs written by `web/fake_run.py` into `runs/fake-…`. git ignores `runs/`, so they are not committed. Their product name is "Made-up test data", and the page shows a yellow band "MADE-UP TEST DATA. Not a real run." on every run whose id starts with `fake-`.
+- Make them again: `.venv/bin/python web/fake_run.py` (nine fixed runs; two starts give the same files, byte for byte). A run that moves: `.venv/bin/python web/fake_run.py --live`, then open `?run=fake-live`; it takes about 45 seconds and writes half a file once on purpose.
+- Remove them: `rm -r runs/fake-*`. Do this before the demo, so that no made-up run is in the list.
+- The two real run folders of today (`20261120-1431`, `20261120-1432`) were made by Step 3 and have no `progress.json`. The page says so for them ("No progress.json in runs/20261120-1432/ yet. Waiting for it. …") and shows nothing else. Line 10 of the check had no real file to look at.
+
+### What was checked
+
+All of PROMPT_5.md section 7, with headless Chrome: the server's answers; the nine made-up runs; twelve addresses looked at once each (text and picture); one moving run watched for 54 seconds without a reload (waiting, then rows growing from 0 to 6, the "Cannot read progress.json right now. Showing the last good state." line while half a file was on disk, the right-hand text changing with the best page, then "finished"); no `innerHTML` and no outside address in the page; no JavaScript error in any look; the page asked only `127.0.0.1` for files. The wifi was not switched off (D3).
+
+### Differences from PLAN.md and PROMPT_5.md
+
+D1 to D11 of PROMPT_5.md section 4 are built as written there. On top of those:
+
+1. **A header on every view** with the name Darwin and one sentence on what the tool does ("Rewrites a product page generation after generation, with its facts kept fixed, and measures how often a panel of open AI models recommends the product."). The owner asked for it. It claims no result.
+2. **The sentence about luck takes its number of votes from the generation the right-hand big number comes from** (the last generation that has a held-out value), not always from the last generation. The two agree unless the newest page was never measured. In that case (`fake-refused`) the page now says "about 48 votes each … about 20 points" in place of "few votes", which describes the two numbers on screen.
+3. **With one generation there is one big number**, so the sentence is "The number above rests on about 48 votes. A difference under about 20 points can be luck." Before the first generation the sentence is left out, because there is no number above it.
+4. The "(35 s ago)" keeps counting while the file cannot be read. Otherwise it would freeze at a young age exactly when the file is stale.
+5. The chart has a title on the up axis ("share of votes"), and the points do not sit on the frame's edge. The thin line is drawn on top of the thick one, so that its small points stay visible where the two meet (generation 0).
+6. A `final` with a missing part counts as no final check and is listed at the bottom (PROMPT_5.md did not say).
+7. PROMPT_5.md section 3 says there is no `evolve.py` and no `runs/` folder. Both existed when this step ran (Step 3 had finished). It changed nothing.
+8. Sizes: `chart.html` 379 lines, `serve.py` 37 (as given, unchanged), `fake_run.py` 182 (about 150 was asked; the timeline and the two texts take the room).
+
+### Not tried
+
+- A real `progress.json`: none exists yet.
+- A real projector. The pictures were taken at 1,300 pixels wide. On a 1,920 by 1,080 screen the header, the two big numbers and most of the chart fit in the first view; the rest needs scrolling.
+- Browsers other than Chrome 157.
