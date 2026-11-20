@@ -144,3 +144,113 @@ No prompt was changed. Both are worded as in PROMPT_2.md section 6.6.
   - run 2: $0.2949 (4 searches, 2 model calls). The answers' own costs and the rise of the key's used amount agreed to the cent.
 - Tavily: 11 searches, so 11 credits.
 - Full runs: 2 of the 3 allowed. The step's limit was $0.50, so there was no room for a third.
+
+## Step 3
+
+Written at the end of Step 3, 2026-11-20. `panel.py` and `evolve.py` exist, generation 0 ran twice, and every line of the check in PROMPT_3.md section 7 passed. Nothing from section 8 was needed: no setting was changed, `check.py` and `otari.py` were not touched.
+
+### What later steps must know about the code
+
+**`panel.py`** reads no files and does nothing when imported. It calls the gateway as `otari.chat(...)`.
+
+- `product_order(question, q, model, seat, order_no, competitors, ours)`: the product names in the order one vote shows them.
+- `vote_messages(question, products)`: the two messages of one vote. `products` are (name, page text) pairs in the order shown.
+- `read_why(text)`: the reason in an answer.
+- `one_vote(run, variant, page, set_name, q, question, model, order_no, gen)`: one call, returns one vote dictionary.
+- `score(run, variant, page, set_name, questions, gen, order_nos=(0,))`: the scoring function. Step 4 calls it for every child.
+  - `run` is a dictionary of what stays the same during a run: `run_id`, `votes_path`, `panel`, `no_reasoning_effort`, `ours` (our product's name), `competitors` (a list of (name, page text) pairs in file order). `evolve.py` also puts `questions` in it (`{"train": [...], "heldout": [...]}`); `panel.py` does not read that.
+  - It returns `variant`, `set`, `votes` (in the order asked: order number, then question, then model), `for_us`, `valid`, `no_votes`, `share` (`for_us / valid`, or `None`), `cost_usd`, and `per_model` (`{model: [for_us, valid]}`).
+  - Each vote is added to `votes.jsonl` as it comes back, by the main thread. In the file the votes are therefore in the order they came back, not the order asked.
+  - `otari.BudgetExceeded` and `otari.SetupProblem` stop the sending (a stop flag that every job looks at before its call), the calls in flight finish and are written, then the error is raised. Any other exception in a job (a bug) sets the same flag, so a bug cannot pay for the rest of the list.
+
+**A line of `votes.jsonl`** has these fields, in this order: `run`, `gen`, `set` (`"train"` or `"heldout"`; Step 4 adds `"final"`), `q` (from 0), `question`, `model` (with `nebius:`), `variant` (`"g0"`), `order_no`, `order` (the names as shown; the first is Product A), `ours` (our letter), `pick`, `picked`, `for_us` (all three `null` for a no-vote), `why`, `no_vote` (`null`, or `"empty answer"`, `"no readable pick"`, or the error as `check.brief` puts it), `answer`, `finish`, `tokens_in`, `tokens_out`, `tokens_thinking`, `cost_usd`, `seconds`, `time`.
+
+**The order rule, in one sentence:** the competitors are shuffled with a seed made of the question, the model and the order number, and our product is put at place `(q + seat + 2 × order_no) mod (number of products)`, so the variant plays no part and every place comes up equally often. Step 4's final check gets its three orders by calling `score` with `order_nos=(0, 1, 2)`. With today's data our product is in each of the six places 6 times on the training list and 8 times on the held-out list.
+
+**`evolve.py`**
+
+- `score_page(run, scores, variant, page, gen)` scores one page on both lists, prints one line per list, and keeps the two results in `scores[variant]` as `{"train": result, "heldout": result}`. It returns that dictionary. Step 4 scores children on the training list only: it can call `panel.score` directly for those, or give `score_page` a list of set names.
+- `read_data()` returns the product's name, the questions, the competitors and our page, or stops with a plain message.
+- `print_tables(run, results)` prints the three tables for one page.
+- `main(run_id, folder, name, questions, competitors, page)` is the run. The option, the data and the run folder are handled under `if __name__ == "__main__":`, before any call.
+- `run.json` holds `run_id`, `started`, `product`, `panel`, `no_reasoning_effort`, `rewriter`, `checker`, `competitors` (names, in file order), `questions` (both lists, copied in), `settings` (`max_tokens`, `temperature`, `reasoning_effort`, `requests_in_flight`), `budget_at_start` (`limit_usd`, `used_usd`, `remaining_usd`) and `startup_test_cost_usd`. It is written once, after the start-up test.
+- `config.py` has three new settings: `GENERATIONS` 12, `NO_VOTE_LIMIT` 0.10, `COST_GAP_LIMIT` 0.01.
+
+**Which reasons the rewriter may be given later:** the `why` of votes with `set` equal to `"train"` and `for_us` equal to `false`. Never anything from `"heldout"`.
+
+### The real numbers
+
+Two full runs, 84 votes each, plus the small test of 6 votes. All 174 answers had a readable pick and the finish reason `stop`. The panel was the six models of `config.PANEL` both times; no reserve was needed.
+
+| Model | Tokens in, one vote | Tokens out: usual, most | Of those thinking: usual, most | Cost of one vote, run 1 | Cost of one vote, run 2 | Seconds: usual | Seconds: slowest |
+|---|---|---|---|---|---|---|---|
+| `gpt-oss-120b` | 5,767 to 5,784 | 112 to 114, 167 | not reported | $0.00093 | $0.00093 | 0.6 | 0.9 |
+| `gemma-3-27b-it` | 6,145 to 6,166 | 34, 40 | not reported | $0.00063 | $0.00063 | 3.3 to 6.6 | 9.2 |
+| `Qwen3-235B-A22B-Instruct-2507` | 5,921 to 5,940 | 38, 45 | not reported | $0.00121 | $0.00121 | 0.9 to 1.6 | 3.5 |
+| `GLM-5.3-Flash` | 5,766 to 5,785 | 42 to 47, 85 | 1 to 8, 43 | $0.00084 | $0.00074 | 1.1 | 6.9 |
+| `MiniMax-M3.1-Flash` | 5,866 to 5,883 | 100 to 108, 169 | 64 to 68, 129 | $0.00088 | $0.00017 | 1.1 | 3.3 |
+| `DeepSeek-V4.1-Flash-1017` | 5,883 to 5,902 | 348 to 396, **600** | 310 to 360, 547 | $0.00206 | $0.00049 | 2.9 to 3.4 | 6.0 |
+
+"Usual" is the middle value of a run's 14 votes; where two numbers are given they are run 1 and run 2.
+
+| | Run 1 (`20261120-1431`) | Run 2 (`20261120-1432`) |
+|---|---|---|
+| Seconds for the 36 training votes | 12 | 9 |
+| Seconds for the 48 held-out votes | 10 | 7 |
+| Cost of generation 0 (84 votes) | $0.0915 | $0.0583 |
+| Cost of the start-up test (20 calls) | $0.0044 | $0.0035 |
+| The key's used amount rose by | $0.0960 | $0.0619 |
+
+**For Step 4's budget rule:** the same 84 votes cost a third less the second time. The reason is the lower price for prompt text a model has seen a moment before: `MiniMax-M3.1-Flash` and `DeepSeek-V4.1-Flash-1017` cost a fifth and a quarter of their first price in run 2, `GLM-5.3-Flash` a little less, the other three the same. So plan with the first-time price: about $0.0011 a vote, $0.092 for 84 votes. A new child page changes the prompt from our product's place on, so its votes will be somewhere between the two prices; nobody has measured that.
+
+### The answers to the "not checked" questions
+
+1. **Tokens and cost of a real vote.** 5,770 to 6,170 tokens in, depending on the model (PLAN.md and PROMPT_3.md expected about 5,000; the user message has 3,324 words). One vote costs $0.0006 to $0.0021 at the first-time price, $0.0011 on average.
+2. **Are 600 tokens enough?** Yes, for all 174 answers. But `DeepSeek-V4.1-Flash-1017` has no room left: it thinks for 115 to 547 tokens before a 40-token answer, and one answer in run 1 used exactly 600 tokens (547 of them thinking) and still ended with `stop` and a pick. A little more thinking and that vote is a no-vote. The other five stay under 170 tokens. `PANEL_MAX_TOKENS` was left at 600, because section 8 of PROMPT_3.md allows 1200 only after a no-vote with the finish reason `length`, and there was none. This is the owner's call before Step 4.
+3. **Time.** Most votes take 1 to 3 seconds. `gemma-3-27b-it` is the slowest (3 to 7 seconds, 9.2 at most). 84 votes took 22 seconds in run 1 and 16 in run 2, with 12 requests in flight. No `429`, no time-out, no retry was seen.
+4. **Fields of a chat answer.** `choices[0].finish_reason`, `usage.prompt_tokens`, `usage.completion_tokens` (thinking included), `usage.total_tokens`, `usage.cost_usd`, `usage.pricing_source`, `usage.tool_cost_usd`. The thinking count is in two places: `GLM-5.3-Flash` and `MiniMax-M3.1-Flash` give `usage.reasoning_tokens`; `DeepSeek-V4.1-Flash-1017` gives only `usage.completion_tokens_details.reasoning_tokens`. `panel.py` reads the first and, if it is missing, the second. `gpt-oss-120b`, `gemma-3-27b-it` and `Qwen3-235B-A22B-Instruct-2507` report no count (`tokens_thinking` is `null`), though `gpt-oss-120b` does think: its message has a `reasoning` text and its answers use about 110 tokens for two short lines. Some models also give `usage.prompt_tokens_details.cached_tokens`.
+5. **How much the votes change between two runs.** 5 of 84 picks differed (6%): 3 from `gpt-oss-120b`, 1 from `gemma-3-27b-it`, 1 from `Qwen3-235B-A22B-Instruct-2507`. All 5 were on held-out questions (numbers 1, 4, 4, 5, 5). 3 of the 5 changed between "for us" and "not for us" (two away from us, one to us). The 36 training picks were the same in both runs. Both runs showed every product in the same order.
+
+### The two generation lines
+
+```
+gen 0 | train 11/36 = 31% | held-out 15/48 = 31% | no-votes 0 | cost $0.09 | left $2.40
+gen 0 | train 11/36 = 31% | held-out 14/48 = 29% | no-votes 0 | cost $0.06 | left $2.34
+```
+
+What stands behind them (the same in both runs unless said):
+
+- Training question 6 (coding agents) went to our product 6 times out of 6; each of the other five training questions once. Held-out question 6 (web search and tools) also 6 of 6.
+- `gemma-3-27b-it` picked our product in 4 of 6 training votes; the models `GLM-5.3-Flash`, `MiniMax-M3.1-Flash` and `DeepSeek-V4.1-Flash-1017` in 1 of 6 (question 6 only).
+- LiteLLM got 48 of 84 votes in run 1 and 50 in run 2, our product 26 and 25, Bifrost 9 and 7, Kong AI Gateway 1 and 1, Portkey 0 and 1, Cloudflare AI Gateway 0 and 0.
+- By the place our product had (run 1, votes for us out of 14): A 5, B 5, C 6, D 4, E 4, F 2.
+
+Otari's own count (usage grouped by the tag `set`) agreed with the files for both runs: 36 requests under `train`, 48 under `heldout`, 20 without a set (the start-up test), and a total cost equal to the answers' own costs ($0.095958 and $0.061898).
+
+### Differences from PLAN.md and PROMPT_3.md
+
+The points D1 to D11 of PROMPT_3.md were followed. New ones:
+
+1. The thinking count is read from two places (answer 4 above). PROMPT_3.md names only `usage.reasoning_tokens`.
+2. A vote's prompt has about 5,900 tokens, not 5,000 (answer 1).
+3. A second run within minutes is cheaper because of the price for repeated prompt text (above). PROMPT_3.md expected about 10 cents for each run.
+4. `nebius:moonshotai/Kimi-K3.1-Pro` passed the start-up test both times, so `run.json` names it as the rewriter (Step 1's log has `GLM-5.3`). The checker is `nebius:deepseek-ai/DeepSeek-V4-Pro-0813`. The start-up test now makes 20 calls and costs under half a cent.
+5. In `panel.score` every exception in a job sets the stop flag, not only the two that PROMPT_3.md names.
+6. When the two cost totals differ by more than `COST_GAP_LIMIT` and agree on the second reading, `evolve.py` prints one plain line saying so. PROMPT_3.md describes only the `NOTE:` line for the other case. Neither has been printed yet: the totals agreed at once.
+7. The stops for bad data and for a panel that is too small use `sys.exit("Stopped: ...")`: the message goes to the error output and the exit code is 1.
+8. `panel.py` has 141 lines (about 100 were asked for) and `evolve.py` 190.
+
+### Tried and not tried
+
+- Tried for real: the small test (6 votes), two full runs, both refusals of `--generations` (none and 2), the "run id exists already" stop.
+- Tried only against a made-up gateway or on a copy of `data/`, at no cost: every kind of no-vote (empty answer, no pick, a failed call, a letter not in use), two `PICK:` lines, the budget running out in the middle (19 votes kept, 20 calls made, not 120), a reserve taking a seat, a panel that is too small, and each stop of `read_data`.
+- Not tried at all: a real `429`, a real time-out, a real `budget_exceeded`.
+
+### What this step cost
+
+- On `darwin-dev`: **$0.1647** (from $0.4995 to $0.6642 used; $2.3358 is left of $3.00).
+  - the small test: $0.0069
+  - run 1: $0.0960
+  - run 2: $0.0619
+- Full runs: 2 of the 4 allowed.
+- The commits are on the branch `step-3`.
