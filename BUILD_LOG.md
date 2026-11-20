@@ -334,3 +334,158 @@ D1 to D11 of PROMPT_5.md section 4 are built as written there. On top of those:
 - A real `progress.json`: none exists yet.
 - A real projector. The pictures were taken at 1,300 pixels wide. On a 1,920 by 1,080 screen the header, the two big numbers and most of the chart fit in the first view; the rest needs scrolling.
 - Browsers other than Chrome 157.
+
+## Step 4
+
+Written at the end of Step 4, 2026-11-20, about 15:30. `rewrite.py` exists, `evolve.py` runs the whole loop, one real run of 3 generations finished, and one run on a 15-cent key was stopped by Otari. The owner changed the order while this step ran (demo in 45 minutes): probe, loop, real run first, the fake-gateway tests while the real run was going; and 2 or 3 generations in place of 2.
+
+### What later steps must know about the code
+
+**`rewrite.py`** reads no files and does nothing when imported. It calls the gateway as `otari.chat(...)`.
+
+- `INSTRUCTIONS` (the four), `REWRITER_SYSTEM`, `REWRITER_USER`, `CHECKER_SYSTEM`, `CHECKER_USER`: worded as in PROMPT_4.md section 6.2.
+- `list_numbers_off`, `code_check`, `read_page`, `read_verdict`, `pick_reasons`: as printed in PROMPT_4.md.
+- `rewriter_messages(run, page, train, reasons, instruction_no)` and `checker_messages(run, page)` build the messages.
+- `ask_rewriter(run, messages, gen)` and `ask_checker(run, page, gen)` are the only two places that call the strong models. **Step 6: the routing policy and the retry label go here.** The model, the `reasoning_effort` and the `max_tokens` come from the `run` dictionary (`rewriter`, `rewriter_effort`, `rewriter_max_tokens`, `checker`, `checker_effort`, `checker_max_tokens`).
+- `make_child(run, gen, k, parent, instruction_no)` returns one dictionary: `gen`, `variant`, `parent`, `instruction`, `rewriter_model`, `page`, `words`, `dropped` (`None` or the reason), `checker_answer`, `reasons` (pairs of `q` and model), `train` (`None`; `evolve.py` fills it), `cost_usd`, `rewrite_cost_usd`, `check_cost_usd`, `rewrite_seconds`, `rewrite_tokens_out`, `check_seconds`. It lets `otari.BudgetExceeded` and `otari.SetupProblem` through.
+
+**`evolve.py`**
+
+- `main(run_id, folder, name, category, questions, competitors, page, facts, generations, until_refused)` is the whole run and returns the status. `read_data()` now returns six things (category and facts are new).
+- `evolution(...)` holds the start-up test, generation 0, the loop and the final check. `generation(run, folder, progress, gen)` runs one generation. `final_check(...)` asks the 288 votes.
+- The ranking: `ranking(scores)`, best training share first, the older variant first among equals. A variant is in `scores` only once its whole training list has been asked (`score_page` now takes the list names to score and stores a result only when it is complete).
+- The budget rule: `enough_left(...)`.
+- One place writes `progress.json`: `write_progress`. One place handles a refusal or a setup problem: the `try` in `main`. The only other place that knows about a refusal is in `generation`: when the new best page's held-out votes are cut, the entry is added with `heldout_share` and `per_model_heldout` `null` before the error goes on.
+- A generation's `cost_usd` and `no_votes`, and the amounts of the cost line, are counted from `votes.jsonl` and `children.jsonl`, not from memory. So they also hold when a list of votes was cut.
+- `children.jsonl`: `run`, `gen`, `variant`, `parent`, `instruction`, `rewriter_model`, `words`, `dropped`, `checker_answer`, `reasons`, `train`, `cost_usd`, `rewrite_cost_usd`, `check_cost_usd`, `rewrite_seconds`, `rewrite_tokens_out`, `check_seconds`, `time`. The two split costs are more than PROMPT_4.md lists; the cost line needs them.
+- `progress.json` is written exactly as PROMPT_4.md section 6.6 says. `rewriter_model` comes from the `Otari-Model` header already. `spend_by_role` is not written (Step 6).
+- `run.json` has the new `settings` of PROMPT_4.md 6.4, step 5.
+- `config.py`: the eleven settings of section 6.1; `CHECKER_EFFORT` is `"none"` (the probe). `PANEL_MAX_TOKENS` 1200 is committed now.
+
+### The probe (run tag `probe-step4`, $0.1081)
+
+The parent was the original page with the training votes of run `20261120-1432` (11 of 36), instruction 1.
+
+Part A, the rewriter, `max_tokens` 3000:
+
+| # | Model | Effort | Seconds | Tokens out (thinking) | Finish | Words | Cost | `code_check` | Works | Fast |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | `Kimi-K3.1-Pro` | `low` | 31.0 | 1,360 (717) | stop | 443 | $0.0191 | passes | yes | yes |
+| 2 | `Kimi-K3.1-Pro` | `none` | 54.5 | 664 (0) | stop | 490 | $0.0121 | passes | yes | no |
+| 3 | `GLM-5.3` | `low` | 6.2 | 650 (1) | stop | 472 | $0.0067 | passes | yes | yes |
+| 4 | `GLM-5.3` | `none` | 108.6 | 3,000 (3,000) | length | 0 | $0.0171 | – | no | no |
+
+Chosen: pair 1, the first that works and is fast. (Here `Kimi-K3.1-Pro` did report its thinking tokens. `GLM-5.3` with `none` thought for all 3,000 tokens: for that model `none` does not mean "do not think". `GLM-5.3` with `low` was five times faster and a third of the price; the rule takes the first pair, not the fastest.)
+
+Part B, the checker, `max_tokens` 2000. Page P is pair 1's page; page X is P plus the two bad sentences.
+
+| # | Model | Effort | Page P | Page X | Works | Fast |
+|---|---|---|---|---|---|---|
+| 1 | `DeepSeek-V4-Pro-0813` | `low` | 46.8 s, 2,000 tokens, all thinking, cut off, no verdict, $0.0106 | 29.4 s, 1,474 tokens (1,430 thinking), FAIL, $0.0085 | no | no |
+| 2 | `DeepSeek-V4-Pro-0813` | `none` | 14.2 s, 19 tokens, PASS, $0.0005 | 14.6 s, 44 tokens, FAIL, $0.0003 | yes | yes |
+| 3 | `GLM-5.3` | `low` | 0.7 s, 17 tokens, PASS, $0.0028 | 90.8 s (one time-out, then the second try), 42 tokens, FAIL, $0.0010 | yes | no |
+
+Chosen: pair 2, the first that works and is fast. Pair 1 was not tried again with 4000 tokens, because a pair that works was there. About page P the chosen checker said, word for word:
+
+```
+UNSUPPORTED: none
+AUDIENCE: none
+VERDICT: PASS
+```
+
+About page X it quoted both added sentences, the first under UNSUPPORTED, the second under AUDIENCE, and said FAIL.
+
+### The real run: `20261120-1518`, 3 generations, 5 minutes 10 seconds, $1.0214
+
+```
+gen 0 | best g0 | train 12/36 = 33% | held-out 15/48 = 31% | children 0, dropped 0 | no-votes 0 | cost $0.09 | left $2.14 | 18 s
+gen 1 | best g1_c1 (new) | train 17/36 = 47% | held-out 19/48 = 40% | children 4, dropped 0 | no-votes 0 | cost $0.25 | left $1.89 | 93 s
+gen 2 | best g2_c1 (new) | train 19/36 = 53% | held-out 19/48 = 40% | children 4, dropped 0 | no-votes 0 | cost $0.23 | left $1.65 | 63 s
+gen 3 | best g2_c1 | train 19/36 = 53% | held-out 19/48 = 40% | children 4, dropped 0 | no-votes 1 | cost $0.19 | left $1.47 | 57 s
+final check | original g0 40/144 = 28% | best g2_c1 52/144 = 36% | no-votes 0 | cost $0.26
+held-out: 28% → 36% (144 votes each)
+Status: finished
+Cost of this run: $1.0214 by the answers' own costs (start-up test $0.0048, votes $0.8202, rewriter $0.1639, checker $0.0326); the key's used amount rose by $1.0214
+```
+
+The twelve children. All were written by `moonshotai/Kimi-K3.1-Pro`, all passed both checks, none was dropped.
+
+| Child | Parent | Instruction | Rewrite: s, tokens out, words, cost | Check: s, cost, verdict | Training votes |
+|---|---|---|---|---|---|
+| g1_c1 | g0 | 1 | 20.7, 1,017, 444, $0.0157 | 33.3, $0.0027, PASS | 17/36 |
+| g1_c2 | g0 | 2 | 32.3, 1,182, 489, $0.0138 | 26.0, $0.0029, PASS | 14/36 |
+| g1_c3 | g0 | 3 | 22.5, 1,055, 486, $0.0160 | 32.5, $0.0028, PASS | 15/36 |
+| g1_c4 | g0 | 4 | 18.8, 835, 387, $0.0139 | 41.4, $0.0026, PASS | 11/36 |
+| g2_c1 | g1_c1 | 2 | 26.0, 1,000, 460, $0.0150 | 0.6, $0.0027, PASS | 19/36 |
+| g2_c2 | g1_c1 | 3 | 30.3, 1,121, 439, $0.0126 | 0.5, $0.0027, PASS | 16/36 |
+| g2_c3 | g1_c3 | 4 | 16.7, 855, 367, $0.0137 | 0.6, $0.0026, PASS | 10/36 |
+| g2_c4 | g1_c3 | 1 | 23.2, 1,067, 451, $0.0123 | 0.6, $0.0028, PASS | 16/36 |
+| g3_c1 | g2_c1 | 3 | 15.4, 964, 473, $0.0147 | 0.7, $0.0028, PASS | 15/36 |
+| g3_c2 | g2_c1 | 4 | 13.8, 997, 385, $0.0150 | 0.6, $0.0026, PASS | 14/36 |
+| g3_c3 | g1_c1 | 1 | 15.0, 897, 436, $0.0104 | 0.9, $0.0027, PASS | 16/36 |
+| g3_c4 | g1_c1 | 2 | 17.3, 1,021, 423, $0.0108 | 0.7, $0.0027, PASS | 15/35 |
+
+- Rewrites took 14 to 32 seconds. Checks took 26 to 41 seconds in generation 1 and under one second afterwards (the checker's answers have about 20 tokens; nobody looked into why the first four were slow).
+- Twelve of twelve passing means the checks dropped nothing in this run. Whether the checker with `none` is strict enough has only the probe's page X behind it.
+
+| Generation | Votes | Rewriter | Checker | Total | Seconds |
+|---|---|---|---|---|---|
+| 0 | $0.0868 (84) | – | – | $0.0868 | 18 |
+| 1 | $0.1771 (192) | $0.0594 | $0.0110 | $0.2475 | 93 |
+| 2 | $0.1706 (192) | $0.0536 | $0.0108 | $0.2350 | 63 |
+| 3 | $0.1253 (144) | $0.0509 | $0.0108 | $0.1870 | 57 |
+| Final check | $0.2604 (288) | – | – | $0.2604 | about 50 |
+
+- Average cost of a vote: generation 0 $0.00103; the children's votes $0.00090; the final check $0.00090.
+- Counted again from the files: 900 lines in `votes.jsonl` (84 + 12 × 36 + 2 × 48 + 288); every number in `progress.json` is what its votes give; all 96 `reasons` entries point at a lost training vote of the child's parent; `code_check` passes again on all twelve page files; the costs in the two files add up to the cost line.
+- The watcher read `progress.json` 613 times, saw the generations grow 0, 1, 2, 3, 4 and then `finished`, and no read failed.
+- Generation 0's training count was 12 of 36 in this run and in the tiny run; Step 3 had 11 twice. So training picks do move between runs.
+
+### The real refusal: run `20261120-1523` on `darwin-tiny` ($0.15)
+
+```
+gen 0 | best g0 | train 12/36 = 33% | held-out 14/48 = 29% | children 0, dropped 0 | no-votes 0 | cost $0.06 | left $0.09 | 23 s
+Generation 1:
+  g1_c1 from g0, instruction 1: 459 words, rewrite 14 s, check 1 s: passed
+  g1_c2 from g0, instruction 2: 461 words, rewrite 13 s, check 1 s: passed
+Stopped by Otari: budget exceeded. votes.jsonl holds 84 votes.
+  Otari's words: POST /chat/completions for nebius:moonshotai/Kimi-K3.1-Pro: status 403, code budget_exceeded: API key has $0.017487 of budget remaining, less than this request's estimated cost of $0.036068. The estimate assumes 3000 output tokens; a lower output token limit on the request may let it fit
+Status: stopped_by_budget
+Cost of this run: $0.0869 by the answers' own costs (start-up test $0.0034, votes $0.0569, rewriter $0.0211, checker $0.0055); the key's used amount rose by $0.0869
+```
+
+- Otari refused two of the four rewrites of generation 1 as they were sent: with $0.09 left it set aside $0.036 for each rewrite, and the third did not fit. The other two rewrites were written, checked and paid.
+- The key ended at $0.0869 used of $0.15: $0.063 below the cap. `progress.json` holds generation 0 alone, `stopped_by_budget`, budget limit 0.15. `children.jsonl` has the two children that came back, their pages are saved, and neither has a vote.
+- The watcher saw no read fail (85 reads). No Python error text. The exit code was not caught (the process was not a child of the shell that asked); the code path is `sys.exit(0)` for this status and the fake runs returned normally.
+- In generation 0 of this run the votes cost $0.0569, a third less than at the first-time price, as in Step 3's second run.
+
+### Lines 12 and 13
+
+- **The chart page** showed run `20261120-1518` with headless Chrome: the name Otari, "finished", 28% → 36% with "Final check on the held-out questions, 144 votes for each page", both lines with four points, the budget bar ($1.79 spent of $3.00), six model bars, both page texts, four table rows with "written by moonshotai/Kimi-K3.1-Pro". No "Not found in progress.json" line (count 1). For the tiny run it says "stopped by Otari: the budget cap was reached", also with no field listed. Nothing in `web/` was touched.
+- **Otari's own count** for run `20261120-1518`: by role, panel 918 requests $0.8215, rewriter 13 requests $0.1669, checker 15 requests $0.0330; by set, train 468 $0.4233, heldout 144 $0.1365, final 288 $0.2604, no set 46 $0.2012. In all 946 requests, 2 of them errors, $1.021414. The files: 900 votes plus 18 start-up votes are the 918; 12 rewrites plus 1 start-up call; 12 checks plus 1 start-up call, so Otari saw 2 checker requests more than answers came back (the 2 errors: most likely two checks of generation 1 that `otari.py` sent a second time).
+
+### The fake-gateway cases (PROMPT_4.md section 7, line 6)
+
+All of a to h pass, in folders under `/tmp/darwin-step4/fakeruns/`: the normal run (12 rewrites, 12 checks, 948 votes, `votes_each` 144, no held-out question in any rewriter or checker message, no `temperature` for the rewriter, parents and instructions as asked); seven kinds of dropped child, each with its own reason, none with a vote, the fenced page saved and scored without its fence; the low-budget stop with its final check; the six refusals, each leaving the generations section 6.5 asks for; `--until-refused`; no child better (and a child with exactly the original's share); a setup problem; `--generations 0`. Every `progress.json` had exactly the fields of section 6.6.
+
+### Differences from PLAN.md and PROMPT_4.md
+
+D1 to D16 were followed. New ones:
+
+1. **`data/facts.md` was not as PROMPT_4.md describes it.** When this step started, the file had a change that is not committed: fact 38 reads "Otari puts any model in your coding agent in 5 minutes." (before: "In the Compose setup, provider copies of attached files are off until they have a pepper of their own."). This step did not make that change and did not touch the file. With it, `5` is a number a page may contain. So two of line 2's examples come out differently: `data/page_gen0.md` gives `numbers that are not in the fact sheet: 4, 6`, and the "ready in 5 minutes" page passes. The rewriter's prompt has 1,891 words and the checker's 1,472 (1,899 and 1,480 were expected). All real calls of this step used the file as it is now.
+2. The real run had 3 generations, not 2, and came before the fake-gateway cases and before the tiny run (the owner's message during the build).
+3. `children.jsonl` has two more fields, `rewrite_cost_usd` and `check_cost_usd`.
+4. After "Stopped by Otari: budget exceeded." the run prints one more line, "Otari's words: …", with the refusal as Otari worded it.
+5. When Otari cuts a generation, the rewrite of a child whose check was refused is paid but appears in no file, so the cost line can then be a little under Otari's count. Not seen in the tiny run (the totals agreed to the cent).
+6. The key's used amount on `darwin-dev` read $1.7936 right after the real run and $1.7901 a few minutes later, $0.0035 less. Nothing of this step explains it.
+7. Sizes: `rewrite.py` 216 lines (about 150 were asked), `evolve.py` 404.
+8. A `README.md` appeared in this folder while the step ran. It is not from this step and was left alone.
+
+No prompt, instruction or check was changed. Nothing from section 8 was needed.
+
+### What this step cost
+
+- On `darwin-dev`: the probe $0.1081 and the real run $1.0214, by the answers' own costs. The key went from $0.6642 to $1.7901 used; **$1.2099 is left of $3.00**.
+- On `darwin-tiny`: $0.0869 of $0.15. It is kept in `.env` as `OTARI_KEY_TINY`. No other key was made.
+- The key in use at the end is `darwin-dev`.
+- The commits are on the branch `step-4`.
