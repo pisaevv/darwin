@@ -47,6 +47,11 @@ RATE_LIMIT_WAIT = 5  # seconds, when the answer has no Retry-After
 
 TAVILY_PRICE = 0.008  # dollars per search
 
+# The main run (Step 3, evolve.py)
+GENERATIONS = 12  # the default of --generations
+NO_VOTE_LIMIT = 0.10  # evolve.py warns when this share of a run's votes, or more, are no-votes
+COST_GAP_LIMIT = 0.01  # dollars: evolve.py says so when its own cost total and Otari's differ by more
+
 # Research (Step 2, research.py)
 COMPETITOR_PAGES = 5
 FEWEST_COMPETITOR_PAGES = 4  # with fewer, research.py writes nothing
