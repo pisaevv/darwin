@@ -1,0 +1,11 @@
+{
+  "name": "Otari",
+  "category": "AI gateway (LLM gateway)",
+  "source_urls": ["https://otari.ai", "https://github.com/mozilla-ai/otari"],
+  "search_queries": [
+    "best AI gateway for LLM applications",
+    "open source LLM gateway comparison",
+    "self-hosted LLM gateway alternatives",
+    "AI gateway with budgets and spend limits per API key"
+  ]
+}

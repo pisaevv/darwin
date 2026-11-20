@@ -1,0 +1,20 @@
+{
+  "train": [
+    "We're a small startup calling several LLM providers. What's the best gateway to put in front of them so we have one API and one place to watch costs?",
+    "Which open-source LLM gateway would you recommend for self-hosting on our own server?",
+    "I need to give each developer their own API key with a hard spending limit across model providers. What tool should I use?",
+    "What's the best way to get automatic fallback between model providers when one is down or rate-limited?",
+    "Our team wants to see what every AI request costs, per project and per key. Which AI gateway does this best?",
+    "Which AI gateway is best for running coding agents against cheaper models while keeping costs under control?"
+  ],
+  "heldout": [
+    "I want one OpenAI-compatible endpoint in front of many model providers, and I don't want to depend on someone else's cloud service. What should I pick?",
+    "What tool can stop our LLM spending automatically when a budget runs out?",
+    "Recommend an LLM proxy for a company that must keep prompts on its own infrastructure.",
+    "Which gateway is best for routing requests between a strong model and a cheap one to save money?",
+    "We need usage tracking and cost reports for AI calls across teams. Which product would you choose?",
+    "What's a good AI gateway that also gives models web search and other tools in one place?",
+    "I'm comparing AI gateways for a 10-person engineering team. Which one would you pick, and why?",
+    "Which LLM gateway is easiest to get running with Docker in an afternoon?"
+  ]
+}
