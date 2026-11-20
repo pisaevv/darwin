@@ -69,11 +69,14 @@ def one_vote(run, variant, page, set_name, q, question, model, order_no, gen):
         vote["no_vote"] = check.brief(problem)
     else:
         usage = answer["raw"].get("usage") or {}
+        thinking = usage.get("reasoning_tokens")  # models report it in one of two places, or not at all
+        if thinking is None:
+            thinking = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
         pick = check.read_pick(answer["text"], letters)
         vote.update(answer=answer["text"], why=read_why(answer["text"]), cost_usd=answer["cost_usd"],
                     finish=(answer["raw"].get("choices") or [{}])[0].get("finish_reason"),
                     tokens_in=usage.get("prompt_tokens"), tokens_out=usage.get("completion_tokens"),
-                    tokens_thinking=usage.get("reasoning_tokens"))
+                    tokens_thinking=thinking)
         if pick:
             picked = order[letters.index(pick)]
             vote.update(pick=pick, picked=picked, for_us=picked == run["ours"])
