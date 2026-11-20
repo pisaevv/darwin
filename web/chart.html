@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Darwin</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --ink: #0f172a; --grey: #475569; --line: #e2e8f0; --soft: #f1f5f9; --strong: #4f46e5; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: #fff; color: var(--ink); font: 19px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #banner { background: #fbbf24; color: #451a03; font-weight: 800; text-align: center; padding: 12px 24px; letter-spacing: .05em; }
+  .site { border-bottom: 1px solid var(--line); }
+  .site div { max-width: 1100px; margin: 0 auto; padding: 18px 24px; display: flex; gap: 20px; align-items: baseline; }
+  .logo { font-size: 26px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+  .logo::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 10px; border-radius: 50%; background: var(--strong); }
+  .tag { color: var(--grey); font-size: 17px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 36px 24px 72px; }
+  h1 { font-size: 46px; line-height: 1.1; letter-spacing: -.02em; margin: 0 0 10px; overflow-wrap: anywhere; }
+  h2 { font-size: 21px; line-height: 1.3; margin: 0 0 18px; }
+  p { margin: 0; }
+  .grey { color: var(--grey); }
+  .small { font-size: 17px; }
+  .card { border: 1px solid var(--line); border-radius: 18px; padding: 30px 34px; margin-top: 26px; }
+  .message { font-size: 24px; padding: 60px 0; max-width: 820px; }
+  #meta { font-size: 20px; color: var(--grey); }
+  #meta b { color: var(--ink); }
+  #stale { margin-top: 6px; }
+
+  #headline { text-align: center; padding: 38px 34px 30px; }
+  .figs { display: flex; justify-content: center; align-items: flex-start; gap: 56px; }
+  .num { font-size: 104px; font-weight: 800; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: var(--grey); }
+  .num.best { color: var(--strong); }
+  .label { margin-top: 10px; color: var(--grey); }
+  .arrow { font-size: 64px; line-height: 104px; color: #94a3b8; }
+  .waiting { font-size: 40px; font-weight: 700; padding: 24px 0; }
+  .line { font-size: 22px; font-weight: 600; margin: 22px 0 14px; }
+  #headline .small { max-width: 800px; margin: 0 auto; }
+
+  .chartbox { height: 380px; }
+  #luck { margin-top: 18px; }
+
+  .budget { display: flex; align-items: center; gap: 24px; }
+  .bar { flex: 1; height: 30px; background: var(--soft); border-radius: 8px; overflow: hidden; }
+  .fill { display: flex; height: 100%; }
+  .piece { background: var(--strong); border-right: 2px solid #fff; }
+  .piece:last-child { border-right: 0; }
+  .piece.other, .swatch.other { background: #94a3b8; }
+  .spent { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .roles { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px 28px; }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 8px; background: var(--strong); }
+
+  #models { display: grid; grid-template-columns: minmax(0, max-content) 1fr max-content; gap: 14px 22px; align-items: center; }
+  #models > p { grid-column: 1 / -1; }
+  #models .bar { height: 22px; }
+  .mname { font-weight: 600; overflow-wrap: anywhere; }
+  .mcount { font-variant-numeric: tabular-nums; text-align: right; }
+
+  #texts { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  #texts h2 { margin-bottom: 2px; }
+  .page { margin-top: 14px; max-height: 480px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--soft); border-radius: 12px; padding: 18px 20px; font-size: 17px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 18px; font-variant-numeric: tabular-nums; }
+  th { font-size: 17px; font-weight: 600; color: var(--grey); text-align: right; vertical-align: bottom; padding: 0 12px 12px; border-bottom: 2px solid var(--line); }
+  td { text-align: right; padding: 11px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { white-space: nowrap; }
+  th:nth-child(5), th:nth-child(6) { white-space: normal; }
+  th:nth-child(2), td:nth-child(2), th:nth-child(9), td:nth-child(9) { text-align: left; }
+  tbody tr:last-child td { border-bottom: 0; }
+
+  #bottom { margin-top: 36px; color: var(--grey); font-size: 17px; }
+  #runlist a { display: block; font-size: 24px; font-weight: 600; color: var(--strong); text-decoration: none; padding: 16px 22px; border: 1px solid var(--line); border-radius: 14px; margin-top: 12px; }
+  #runlist h2 { margin: 44px 0 4px; color: var(--grey); }
+</style>
+</head>
+<body>
+<div id="banner" hidden>MADE-UP TEST DATA. Not a real run.</div>
+<header class="site"><div>
+  <span class="logo">Darwin</span>
+  <span class="tag">Rewrites a product page generation after generation, with its facts kept fixed, and measures how often a panel of open AI models recommends the product.</span>
+</div></header>
+<main>
+  <p id="message" class="message" hidden></p>
+  <div id="runlist" hidden></div>
+  <div id="run" hidden>
+    <section id="top"><h1 id="product"></h1><p id="meta"></p></section>
+    <p id="stale" class="grey small" hidden>Cannot read progress.json right now. Showing the last good state.</p>
+    <section class="card" id="headline"></section>
+    <section class="card" id="chartPart"><div class="chartbox"><canvas id="chart"></canvas></div><p id="luck"></p></section>
+    <section class="card"><h2>Budget of the key this run uses, as Otari reports it</h2><div id="budget"></div></section>
+    <section class="card"><h2 id="modelsTitle"></h2><div id="models"></div></section>
+    <section id="texts">
+      <div class="card"><h2>Original page</h2><p id="originalWords" class="grey small"></p><div id="originalText" class="page"></div></div>
+      <div class="card"><h2 id="championTitle"></h2><p id="championWords" class="grey small"></p><div id="championText" class="page"></div></div>
+    </section>
+    <section class="card" id="tablePart"><table id="table"></table></section>
+  </div>
+  <footer id="bottom"></footer>
+</main>
+<script src="chart.umd.js"></script>
+<script>
+"use strict";
+// Everything that comes from a file is put on the page as text (textContent), never as HTML.
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const fill = (node, ...kids) => node.replaceChildren(...kids);
+const num = (v) => ((typeof v === "number" || (typeof v === "string" && v.trim() !== "")) && Number.isFinite(Number(v)) ? Number(v) : null);
+const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : null);
+const pct = (share) => Math.round(share * 100) + "%";
+const usd = (v) => "$" + v.toFixed(2);
+const na = (v, show = String) => (v == null ? "n/a" : show(v));
+
+const RUN = new URLSearchParams(location.search).get("run");
+const STATUS = new Map([["running", "running"], ["finished", "finished"],
+  ["stopped_low_budget", "stopped: not enough budget left for another generation"],
+  ["stopped_by_budget", "stopped by Otari: the budget cap was reached"]]);
+let S = null;          // the last good progress.json, checked and tidied by understand()
+let lastText = null;   // its raw text, to notice when nothing changed
+let modified = null;   // its Last-Modified header
+let fails = 0;         // failed reads in a row
+let chart = null;
+const shown = { original: null, champion: null };   // the page file each text column shows now
+
+// Turns the file's data into checked values, and lists every field that is missing or unusable.
+function understand(d) {
+  const missing = [];
+  const need = (v, name) => { if (v == null) missing.push(name); return v; };
+  const text = (v, name) => need(typeof v === "string" && v.trim() ? v : null, name);
+  const number = (v, name) => need(num(v), name);
+  const share = (v, name) => { const n = num(v); return need(n != null && n >= 0 && n <= 1 ? n : null, name); };
+  const path = (v, name) => need(typeof v === "string" && v && !v.includes("..") && !v.includes(":") && !v.startsWith("/") ? v : null, name);
+
+  const s = { missing, runId: text(d.run_id, "run_id") || RUN, product: text(d.product, "product") || "our product", status: text(d.status, "status") };
+  const panel = Array.isArray(d.panel) && d.panel.length && d.panel.every((m) => typeof m === "string") ? d.panel : need(null, "panel");
+  const b = need(obj(d.budget), "budget");
+  if (b) {
+    const limit = number(b.limit_usd, "budget.limit_usd"), used = number(b.used_usd, "budget.used_usd");
+    if (limit > 0 && used != null) s.budget = { limit, used };
+  }
+  s.roles = Object.entries(obj(d.spend_by_role) || {}).map(([name, v]) => [name, num(v)]).filter(([, v]) => v != null && v >= 0);
+
+  let before = null;
+  s.gens = (need(Array.isArray(d.generations) ? d.generations : null, "generations") || []).map((raw, i) => {
+    const g = obj(raw) || {};
+    const n = need(num(g.gen), `generation ${i}: gen`) ?? i, at = (field) => `generation ${n}: ${field}`;
+    const out = { n, champion: text(g.champion, at("champion")), train: share(g.train_share, at("train_share")) };
+    const held = share(g.heldout_share, at("heldout_share"));
+    // Rule D5: no number, but the same best page as the generation before: its number still holds.
+    out.held = held ?? (before && out.champion && out.champion === before.champion ? before.held : null);
+    out.made = number(g.children_made, at("children_made"));
+    out.dropped = number(g.children_dropped, at("children_dropped"));
+    out.noVotes = number(g.no_votes, at("no_votes"));
+    out.cost = number(g.cost_usd, at("cost_usd"));
+    out.writer = typeof g.rewriter_model === "string" && g.rewriter_model ? g.rewriter_model : null;
+    const perModel = need(obj(g.per_model_heldout), at("per_model_heldout"));
+    if (perModel) {
+      out.pairs = new Map();
+      for (const [model, pair] of Object.entries(perModel)) {
+        const forUs = num(pair?.[0]), valid = num(pair?.[1]);
+        if (forUs != null && valid != null && forUs >= 0 && forUs <= valid) out.pairs.set(model, [forUs, valid]);
+        else missing.push(at("per_model_heldout"));
+      }
+    }
+    return (before = out);
+  });
+  s.last = s.gens[s.gens.length - 1] || null;
+  s.best = [...s.gens].reverse().find((g) => g.held != null) || null;   // the last generation with a held-out value
+  s.panel = panel || [...new Set(s.gens.flatMap((g) => [...(g.pairs?.keys() || [])]))];
+  s.original = path(d.original_page, "original_page");
+  s.champion = path(d.champion_page, "champion_page");
+  const f = obj(d.final);
+  if (f) {
+    const original = share(f.original_share, "final.original_share"), champion = share(f.champion_share, "final.champion_share");
+    const votes = number(f.votes_each, "final.votes_each");
+    if (original != null && champion != null && votes > 0) s.final = { original, champion, votes };
+  }
+  return s;
+}
+
+function drawTop() {
+  $("product").textContent = S.product;
+  document.title = "Darwin: " + S.runId;
+  drawMeta();
+}
+
+function drawMeta() {
+  const words = STATUS.get(S.status) || S.status || "status unknown";
+  const time = Date.parse(modified || "");
+  let when = "";
+  if (Number.isFinite(time)) {
+    const s = Math.max(0, Math.round((Date.now() - time) / 1000));
+    const ago = s < 120 ? s + " s" : s < 7200 ? Math.round(s / 60) + " min" : Math.round(s / 3600) + " h";
+    when = ` · last update ${new Date(time).toLocaleTimeString("en-GB")} (${ago} ago)`;
+  }
+  fill($("meta"), `run ${S.runId} · `, el("b", "", words), when);
+}
+
+function drawHeadline() {
+  const figure = (share, label, best) => { const d = el("div"); d.append(el("div", best ? "num best" : "num", na(share, pct)), el("div", "label", label)); return d; };
+  const figures = (...kids) => { const d = el("div", "figs"); d.append(...kids); return d; };
+  const arrow = () => el("div", "arrow", "→");
+  const g = S.gens, out = [];
+  if (!g.length) out.push(el("p", "waiting", "Waiting for the first result."));
+  else if (S.final) out.push(figures(figure(S.final.original, "original page"), arrow(), figure(S.final.champion, "best page", true)),
+    el("p", "line", `Final check on the held-out questions, ${S.final.votes} votes for each page.`));
+  else if (g.length === 1) out.push(figures(figure(g[0].held, "original page")), el("p", "line", "Held-out questions. No rewritten page has been scored yet."));
+  else {
+    let line = S.status === "running" ? "Held-out questions. The final check has not run yet." : "Held-out questions. The final check did not run.";
+    if (S.last.held == null) line += ` The newest page (generation ${S.last.n}) has no held-out result.`;
+    const label = S.best ? `best page so far (generation ${S.best.n})` : "best page so far";
+    out.push(figures(figure(g[0].held, "original page"), arrow(), figure(S.best && S.best.held, label, true)), el("p", "line", line));
+  }
+  out.push(el("p", "small grey", `Share of votes for ${S.product} from ${S.panel.length || "the panel's"} open models. Every model got the same buyer questions and the same product pages, and named the product it would recommend.`));
+  fill($("headline"), ...out);
+}
+
+function drawChart() {
+  if (!chart) {
+    Chart.defaults.font.size = 15;
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.color = "#0f172a";
+    chart = new Chart($("chart"), {
+      type: "line",
+      // The thin line comes first so that it is drawn on top: its small points stay visible where the two lines meet.
+      data: { labels: [], datasets: [
+        { label: "questions the rewriter learned from (rises by design)", data: [], borderColor: "#64748b", backgroundColor: "#fff", borderWidth: 1.5, borderDash: [6, 5], pointRadius: 3.5, pointBorderDash: [] },
+        { label: "held-out questions (the rewriter never sees them)", data: [], borderColor: "#4f46e5", backgroundColor: "#4f46e5", borderWidth: 4, pointRadius: 6, pointHoverRadius: 7 },
+      ] },
+      options: {
+        animation: false, maintainAspectRatio: false,
+        scales: {
+          x: { offset: true, title: { display: true, text: "generation" }, grid: { display: false } },
+          y: { min: 0, max: 100, title: { display: true, text: "share of votes" }, ticks: { stepSize: 20, callback: (v) => v + "%" } },
+        },
+        plugins: {
+          legend: { align: "start", reverse: true, labels: { usePointStyle: true, pointStyle: "line", boxWidth: 44, padding: 22 } },
+          tooltip: { callbacks: { title: (items) => "generation " + items[0].label, label: (item) => `${item.dataset.label}: ${Math.round(item.parsed.y)}%` } },
+        },
+      },
+    });
+  }
+  chart.data.labels = S.gens.map((g) => g.n);
+  chart.data.datasets[0].data = S.gens.map((g) => (g.train == null ? null : g.train * 100));
+  chart.data.datasets[1].data = S.gens.map((g) => (g.held == null ? null : g.held * 100));
+  chart.update();
+
+  // How much can be luck. n is the number of votes behind each of the two big numbers.
+  const pairs = S.best && S.best.pairs;
+  const n = S.final ? S.final.votes : pairs ? [...pairs.values()].reduce((sum, pair) => sum + pair[1], 0) : 0;
+  const m = Math.round(139 / Math.sqrt(n));
+  $("luck").textContent = !S.last ? ""
+    : S.final ? `With ${n} votes on each side, a difference under about ${m} points can be luck.`
+    : n > 0 && S.gens.length === 1 ? `The number above rests on about ${n} votes. A difference under about ${m} points can be luck.`
+    : n > 0 ? `The two numbers above rest on about ${n} votes each. A difference under about ${m} points can be luck.`
+    : S.gens.length === 1 ? "The number above rests on few votes. Small differences can be luck."
+    : "The two numbers above rest on few votes. Small differences can be luck.";
+}
+
+function drawBudget() {
+  const b = S.budget;
+  if (!b) return fill($("budget"), el("p", "grey", "not in the file"));
+  const parts = S.roles.slice(), named = parts.reduce((sum, [, v]) => sum + v, 0);
+  if (parts.length && Math.round((b.used - named) * 100) >= 1) parts.push(["other", b.used - named]);
+  const filled = el("div", "fill"), roles = el("p", "roles small");
+  filled.style.width = Math.min(100, Math.max(0, (b.used / b.limit) * 100)) + "%";
+  (parts.length ? parts : [["", 1]]).forEach(([name, v], i) => {
+    const piece = el("div", name === "other" ? "piece other" : "piece"), swatch = el("span", name === "other" ? "swatch other" : "swatch");
+    piece.style.flex = v + " 0 0";
+    piece.style.opacity = swatch.style.opacity = name === "other" ? 1 : [1, 0.68, 0.44, 0.28][i % 4];
+    filled.append(piece);
+    if (name) { const item = el("span"); item.append(swatch, `${name} ${usd(v)}`); roles.append(item); }
+  });
+  const bar = el("div", "bar"), row = el("div", "budget");
+  bar.append(filled);
+  row.append(bar, el("div", "spent", `${usd(b.used)} spent of ${usd(b.limit)}`));
+  fill($("budget"), row, ...(parts.length ? [roles] : []));
+}
+
+function drawModels() {
+  $("modelsTitle").textContent = `Held-out votes for ${S.product} per model, with the best page so far`;
+  if (!S.last || !S.last.pairs) return fill($("models"), el("p", "grey", "not measured for this page"));
+  const cells = [];
+  for (const model of S.panel) {
+    const pair = S.last.pairs.get(model), bar = el("div", "bar"), filled = el("div", "fill piece");
+    filled.style.width = pair && pair[1] > 0 ? (pair[0] / pair[1]) * 100 + "%" : "0";
+    bar.append(filled);
+    cells.push(el("div", "mname", model.replace(/^nebius:/, "")), bar, el("div", "mcount", pair ? `${pair[0]} of ${pair[1]}` : "n/a"));
+  }
+  fill($("models"), ...cells);
+}
+
+// Shows one page file as plain text. It is fetched again only when its path has changed.
+async function showText(which, path) {
+  const box = $(which + "Text"), count = $(which + "Words");
+  const say = (text) => { shown[which] = null; count.textContent = ""; box.className = "page grey"; box.textContent = text; };
+  if (!path) return say("not in the file");
+  if (shown[which] === path) return;
+  shown[which] = path;
+  let text = null;
+  try { const r = await fetch(`../runs/${RUN}/${path}`, { cache: "no-store" }); if (r.ok) text = await r.text(); } catch {}
+  if (shown[which] !== path) return;   // a newer best page has taken over meanwhile
+  if (text == null) return say("cannot read " + path);
+  count.textContent = text.split(/\s+/).filter(Boolean).length + " words";
+  box.className = "page";
+  box.textContent = text;
+}
+
+function drawTexts() {
+  $("championTitle").textContent = "Best page so far" + (S.last ? ` (${S.last.champion || "?"})` : "");
+  showText("original", S.original).catch(console.error);
+  showText("champion", S.champion).catch(console.error);
+}
+
+function drawTable() {
+  const by = S.gens.some((g) => g.writer);
+  const row = (cells, tag) => { const tr = el("tr"); cells.forEach((c) => tr.append(el(tag, "", c))); return tr; };
+  const head = el("thead"), body = el("tbody");
+  head.append(row(["generation", "best page", "training", "held-out", "children made", "dropped by the checks", "no-votes", "cost"].concat(by ? ["written by"] : []), "th"));
+  for (const g of S.gens) body.append(row([g.n, g.champion || "?", na(g.train, pct), na(g.held, pct), na(g.made), na(g.dropped), na(g.noVotes), na(g.cost, usd)].concat(by ? [g.writer || "–"] : []), "td"));
+  fill($("table"), head, body);
+}
+
+function drawBottom() {
+  const lines = [el("p", "", `This page reads runs/${RUN}/progress.json every 2 seconds.`)];
+  if (S && S.missing.length) lines.push(el("p", "", "Not found in progress.json: " + [...new Set(S.missing)].join(", ")));
+  fill($("bottom"), ...lines);
+}
+
+// Each part is drawn on its own, so a surprise in one cannot blank the others.
+const PARTS = [["top", drawTop], ["headline", drawHeadline], ["chartPart", drawChart], ["budget", drawBudget], ["models", drawModels], ["texts", drawTexts], ["tablePart", drawTable], ["bottom", drawBottom]];
+function safe(id, draw) {
+  try { draw(); } catch (e) { console.error(e); fill($(id), el("p", "grey", "cannot be shown")); }
+}
+
+function say(text) { $("message").textContent = text; $("message").hidden = false; }
+
+// Reads progress.json. The next read is planned only when this one has ended.
+async function read() {
+  try {
+    const answer = await fetch(`../runs/${RUN}/progress.json`, { cache: "no-store" });
+    if (!answer.ok) throw new Error(answer.status === 404 ? "not found" : "no answer");
+    const text = await answer.text(), data = obj(JSON.parse(text));
+    if (!data) throw new Error("not an object");
+    const changed = text !== lastText;
+    if (changed) S = understand(data);
+    lastText = text; modified = answer.headers.get("Last-Modified"); fails = 0;
+    $("message").hidden = true; $("run").hidden = false; $("stale").hidden = true;
+    if (changed) for (const [id, draw] of PARTS) safe(id, draw);
+    else safe("top", drawMeta);
+  } catch (e) {
+    fails++;
+    if (!S) say(e.message === "not found"
+      ? `No progress.json in runs/${RUN}/ yet. Waiting for it. (A run writes it when it starts; runs made before Step 4 have none.)`
+      : `Cannot read runs/${RUN}/progress.json. Trying again every 2 seconds.`);
+    else { $("stale").hidden = fails < 3; safe("top", drawMeta); }   // the "ago" keeps counting
+  } finally { setTimeout(read, 2000); }
+}
+
+async function listRuns() {
+  let names = [];
+  try {
+    const answer = await fetch("../runs/", { cache: "no-store" });
+    if (answer.ok) names = [...(await answer.text()).matchAll(/href="([^"\/]+)\/"/g)].map((m) => m[1]).filter((n) => /^[A-Za-z0-9_-]+$/.test(n));
+  } catch {}
+  if (!names.length) return say("No runs yet. A run appears here once evolve.py has started.");
+  const link = (name) => { const a = el("a", "", name); a.href = "chart.html?run=" + name; return a; };
+  const real = names.filter((n) => !n.startsWith("fake-")).sort().reverse(), fake = names.filter((n) => n.startsWith("fake-")).sort();
+  fill($("runlist"), el("h1", "", "Runs"), ...real.map(link), ...(fake.length ? [el("h2", "", "Made-up test runs"), ...fake.map(link)] : []));
+  $("runlist").hidden = false;
+}
+
+if (location.protocol === "file:") say("Open this page through its server. In the project folder run: .venv/bin/python web/serve.py");
+else if (!RUN) listRuns();
+else if (!/^[A-Za-z0-9_-]+$/.test(RUN)) say("This is not a run id.");
+else { $("banner").hidden = !RUN.startsWith("fake-"); safe("bottom", drawBottom); read(); }
+</script>
+</body>
+</html>
