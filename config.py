@@ -46,3 +46,26 @@ RATE_LIMIT_TRIES = 3
 RATE_LIMIT_WAIT = 5  # seconds, when the answer has no Retry-After
 
 TAVILY_PRICE = 0.008  # dollars per search
+
+# Research (Step 2, research.py)
+COMPETITOR_PAGES = 5
+FEWEST_COMPETITOR_PAGES = 4  # with fewer, research.py writes nothing
+SPARE_PAGES = 2
+CANDIDATES_TO_ASK = 10  # products the model is asked to list
+PAGE_MIN_WORDS = 150
+PAGE_MAX_WORDS = 600
+SEARCH_RESULTS = 8  # the four main searches: results each
+SEARCH_TOKENS = 400  # and tokens per result
+FALLBACK_RESULTS = 5  # the search on one product's own site, when its page cannot be fetched
+FALLBACK_TOKENS = 1500
+FETCH_MAX_CHARS = 30000
+FACTS_MIN = 15
+FACTS_MAX = 40
+FACTS_SOURCE_WORDS = 3000  # most words of one source page given to the facts call
+RESEARCH_MAX_TOKENS = 4000  # for the two model calls; thinking counts against it
+# Sites shared by many products. A page there is not "the product's own website".
+SHARED_SITES = [
+    "github.com", "github.io", "gitlab.com", "pypi.org", "npmjs.com", "huggingface.co",
+    "readthedocs.io", "medium.com", "substack.com", "reddit.com", "wikipedia.org",
+    "youtube.com", "linkedin.com", "x.com", "twitter.com", "g2.com", "producthunt.com",
+]
