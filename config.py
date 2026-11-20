@@ -62,7 +62,9 @@ FETCH_MAX_CHARS = 30000
 FACTS_MIN = 15
 FACTS_MAX = 40
 FACTS_SOURCE_WORDS = 3000  # most words of one source page given to the facts call
-RESEARCH_MAX_TOKENS = 4000  # for the two model calls; thinking counts against it
+# For the two model calls. Thinking counts against it, and GLM-5.3 was seen to think for
+# 10,000 tokens before a 1,000-token answer. With 4000 both strong models gave no answer at all.
+RESEARCH_MAX_TOKENS = 16000
 # Sites shared by many products. A page there is not "the product's own website".
 SHARED_SITES = [
     "github.com", "github.io", "gitlab.com", "pypi.org", "npmjs.com", "huggingface.co",

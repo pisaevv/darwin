@@ -67,3 +67,80 @@ None. All six panel models take it.
 - `init` needed three runs the first time: the first created the `tavily` tool and stopped at the price (point 8). After the fix it created the price, and the next run said "already there" four times.
 - Created on the gateway: the search tool `tavily`, its price, the key `darwin-dev`, the budget `darwin-dev` ($3, no reset), and the link between them. Nothing else was changed or deleted.
 - Spent on `darwin-dev`: $0.0224. That is two full checks, plus 6 very small chat calls (run tags `probe-1` to `probe-3`) to answer question 1 and to see real answers, plus one $0 fetch to see its fields. Two Tavily credits used.
+
+## Step 2
+
+Written at the end of Step 2, 2026-11-20. `research.py` ran and the data check says PASS. The data is not frozen yet: the owner's checkpoint comes first.
+
+### What later steps must know about the data
+
+- A competitor's name is its file name without `.md`. Step 3 reads `data/competitors/*.md`, sorted by file name. The tool never reads `data/spare/` or `data/sources.json`.
+- A page file holds the page text and nothing else: no heading, address or name is added. Every file is UTF-8 and ends with one line break.
+- A word is what `text.split()` gives. `research.words(text)` counts this way.
+- `data/facts.md` has one fact per line, as `N. text`. The numbering can have gaps after the owner's corrections.
+- Step 4's check "every number in the page also appears in `facts.md`" must take the list numbers off first (`re.sub(r"^\d+\.\s*", "", line)`), or every small number passes. With today's files, `page_gen0.md` holds three numbers that no fact holds: `5` (from "in 5 minutes") and `4` and `6` (from the model name `claude-sonnet-4-6`). A rewrite that keeps them would be dropped by that check, unless the owner adds a fact.
+- `research.py` can be imported without anything happening. Useful to later steps: `words(text)`, `numbers(text)` (every run of digits, with `.` or `,` allowed between digits), `key_word(name)` (a name's first run of letters and digits, in small letters), `clean(text)` and `cut(text, limit)`.
+- `.venv/bin/python research.py` with the data in place changes nothing and costs nothing. It prints the data check: a table and `RESULT: PASS` or `FAIL`. Its exit code is 0 for PASS and 1 for FAIL.
+
+### What later steps must know about the strong models
+
+This matters most for Step 4.
+
+- Without `reasoning_effort`, the strong models think for about 10,000 tokens before they answer, and thinking counts against `max_tokens`. With `max_tokens` 4000, `GLM-5.3` and `DeepSeek-V4-Pro-0813` both used all 4,000 tokens and gave no answer. PLAN.md gives the rewriter 3000 and the checker 1500. Called the way this step calls them, they would give nothing.
+- One answer took 2 to 3.5 minutes and cost 5 to 15 cents (table below). PLAN.md section 10 counts on 4 rewrites and 4 checks per generation, at about $0.33 and 2 minutes for the whole generation.
+- Not tried on the strong models: `reasoning_effort: "low"` with a real task. Step 1's test called `GLM-5.3` and `DeepSeek-V4-Pro-0813` without it, on a tiny prompt with `max_tokens` 600, and they answered in 9 to 30 seconds. So how long they think depends on the task.
+- `nebius:moonshotai/Kimi-K3.1-Pro` (the plan's rewriter) can be used now. At 14:07 the gateway had no price for it. At 14:14 it had one: $2 per million tokens in, $10 out, with the source "configured", so it was set by hand on the gateway and not by this step. It is the dearest of the three.
+- `usage.reasoning_tokens` says how many tokens were thinking. `GLM-5.3` reports it. `Kimi-K3.1-Pro` does not.
+
+| Call | Model | `max_tokens` | Seconds | Tokens in | Tokens out | Cost | Result |
+|---|---|---|---|---|---|---|---|
+| Run 1, candidates | `GLM-5.3` | 4000 | 38 | 14,656 | 4,000 | $0.0381 | no answer, cut off |
+| Run 1, candidates | `DeepSeek-V4-Pro-0813` | 4000 | 31 | 14,804 | 4,000 | $0.0354 | no answer, cut off |
+| Test call, facts | `GLM-5.3` | 12000 | 161 | 2,575 | 11,147 (10,198 thinking) | $0.0527 | 40 facts, none with a strange number |
+| Run 2, candidates | `Kimi-K3.1-Pro` | 16000 | 129 | 14,277 | 11,922 | $0.1477 | 10 products |
+| Run 2, facts | `Kimi-K3.1-Pro` | 16000 | 197 | 2,622 | 11,011 | $0.1152 | 40 facts, none dropped |
+
+The data on disk comes from run 2, so `Kimi-K3.1-Pro` did the research: both calls.
+
+### What the probe showed about search
+
+Three searches for `Helicone AI gateway`, 5 results, 1,500 tokens per result.
+
+- **Does `snippet` hold the page's text?** Yes. It is the start of the page text Tavily returns (`raw_content`), as Markdown with blank lines, links and pictures. It is not the short excerpt.
+- **How many words for 1,500 tokens?** The text is cut at 6,000 characters, 4 for each token. That gave 487 and 790 words. Shorter pages came whole: 296, 569 and 621 words. For the main searches (400 tokens), 31 results gave 6,100 words in all.
+- **Are all results from the site asked for?** This is where the gateway differs from PROMPT_2.md. `otari.search(…, domains=["helicone.ai"])` gave **0 results**. Tavily's own answer (asked for with `include_raw`) held 5 results, all from other sites (`docs.litellm.ai`, `github.com`, `tavily.com`, `promptfoo.dev`, `ai-sdk.dev`). So the gateway does not pass `search_domain_filter` on to Tavily. Tavily searches everywhere and the gateway then removes the results from other sites.
+- Tavily's own filter does work through the gateway: the body field `provider_options: {"include_domains": ["helicone.ai"]}` gave 5 results, all from `www.helicone.ai` and `docs.helicone.ai`. The front page was not among them: three blog posts and two documentation pages. `otari.search` cannot send this field, and `otari.py` was not changed.
+- What this means: the search fallback in `research.py` is built as PROMPT_2.md describes, with `domains`. On this gateway it finds a page only if the product's own site is among Tavily's first 5 results for `"<name> <category>"`. In run 2 it was never needed: all seven pages were read by fetch. It has only run against a made-up gateway.
+
+### Differences from PLAN.md and PROMPT_2.md
+
+The points D1 to D13 of PROMPT_2.md were followed. New ones:
+
+1. **`max_tokens` for the two model calls is 16000, not 4000** (`config.RESEARCH_MAX_TOKENS`). With 4000 no strong model answered (above). The timeout stays `config.REWRITER_TIMEOUT`.
+2. **One run cost $0.29, not 10 to 15 cents.** The two model calls are $0.26 of it.
+3. **`domains` does not reach Tavily** (above).
+4. **`research.py` has 511 lines, not about 250.** 90 are empty and 45 are the two prompts. It has no cache, no resume, no threads and no option but `--force`.
+5. `data/sources.json` names two models, `model_candidates` and `model_facts`, because the two calls can end up with different models. In run 2 both are the same.
+6. `moved` is also true for a page read by search, when its address is not the one asked for.
+7. The "seen before" test also looks at the site a kept page was really read from, not only at the address the model gave.
+8. A new setting, `config.FEWEST_COMPETITOR_PAGES = 4`: with fewer, nothing is written.
+9. A line of the model's list that starts with `|` (a table row) is read too.
+10. The key's used amount is asked a second time just before the files are written, not after. So "Stopped: …" always means that nothing was written.
+11. Fetch gives `content_type` `text/markdown` for some sites (here `cloudflare.com`, `openrouter.ai`, `aws.amazon.com`): a version of the page written for AI agents.
+
+No prompt was changed. Both are worded as in PROMPT_2.md section 6.6.
+
+### Tried and not tried
+
+- Tried for real: run 1 (stopped at the first model call, wrote nothing), run 2 (PASS), the refusing run (changes nothing, costs nothing).
+- Tried only against a made-up gateway, with made-up texts, at no cost: `--force` replacing old output, `--force` leaving old output alone when the run fails, the search fallback, a failed model call handing over to the next model, every reason for skipping a candidate, dropped facts, a cut-off facts answer, "too few competitors", and the cap running out in the middle.
+
+### What this step cost
+
+- On `darwin-dev`: **$0.4770** (from $0.0224 to $0.4995 used; $2.5005 is left of $3.00).
+  - 3 probe searches: $0.0240
+  - run 1: $0.1055 (4 searches, 2 model calls without an answer)
+  - the test call: $0.0527
+  - run 2: $0.2949 (4 searches, 2 model calls). The answers' own costs and the rise of the key's used amount agreed to the cent.
+- Tavily: 11 searches, so 11 credits.
+- Full runs: 2 of the 3 allowed. The step's limit was $0.50, so there was no room for a third.

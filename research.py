@@ -206,12 +206,16 @@ def ask(models, system, user, read):
             continue
         spent["usd"] += answer["cost_usd"]
         usage = answer["raw"].get("usage") or {}
+        thinking = usage.get("reasoning_tokens")  # not every model reports it
         print(f"  {model}: {answer['seconds']:.0f} seconds, {usage.get('prompt_tokens')} tokens in, "
-              f"{usage.get('completion_tokens')} out, ${answer['cost_usd']:.4f}")
+              f"{usage.get('completion_tokens')} out "
+              f"({'an unreported number' if thinking is None else thinking} of them thinking), "
+              f"${answer['cost_usd']:.4f}")
         result = read(answer)
         if result:
             return model, result
-        print(f"  {model}: its answer could not be used")
+        ended = (answer["raw"].get("choices") or [{}])[0].get("finish_reason")
+        print(f"  {model}: its answer could not be used. It ended with {ended!r} and starts: {answer['text'][:80]!r}")
     sys.exit("Stopped: no model gave an answer that could be used. Nothing was written.")
 
 

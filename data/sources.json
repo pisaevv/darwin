@@ -1,0 +1,114 @@
+{
+  "run_id": "research-20261120-1414",
+  "model_candidates": "nebius:moonshotai/Kimi-K3.1-Pro",
+  "model_facts": "nebius:moonshotai/Kimi-K3.1-Pro",
+  "cost_usd": 0.294898,
+  "searches": 4,
+  "ours": [
+    {
+      "address": "https://otari.ai",
+      "final_url": "https://otari.ai",
+      "words": 597
+    },
+    {
+      "address": "https://github.com/mozilla-ai/otari",
+      "final_url": "https://github.com/mozilla-ai/otari",
+      "words": 787
+    }
+  ],
+  "candidates": [
+    {
+      "name": "LiteLLM",
+      "address": "https://www.litellm.ai/",
+      "outcome": "competitor",
+      "file": "LiteLLM.md",
+      "how": "fetch",
+      "page_address": "https://www.litellm.ai/",
+      "moved": false,
+      "content_type": "text/html",
+      "words": 600
+    },
+    {
+      "name": "Bifrost",
+      "address": "https://www.getmaxim.ai/bifrost",
+      "outcome": "competitor",
+      "file": "Bifrost.md",
+      "how": "fetch",
+      "page_address": "https://www.getmaxim.ai",
+      "moved": true,
+      "content_type": "text/html",
+      "words": 598
+    },
+    {
+      "name": "Portkey",
+      "address": "https://portkey.ai/",
+      "outcome": "competitor",
+      "file": "Portkey.md",
+      "how": "fetch",
+      "page_address": "https://portkey.ai/",
+      "moved": false,
+      "content_type": "text/html",
+      "words": 600
+    },
+    {
+      "name": "Cloudflare AI Gateway",
+      "address": "https://www.cloudflare.com/developer-platform/products/ai-gateway/",
+      "outcome": "competitor",
+      "file": "Cloudflare AI Gateway.md",
+      "how": "fetch",
+      "page_address": "https://www.cloudflare.com/products/ai-gateway/",
+      "moved": true,
+      "content_type": "text/markdown",
+      "words": 273
+    },
+    {
+      "name": "Kong AI Gateway",
+      "address": "https://konghq.com/products/kong-ai-gateway",
+      "outcome": "competitor",
+      "file": "Kong AI Gateway.md",
+      "how": "fetch",
+      "page_address": "https://konghq.com/products/kong-ai-gateway",
+      "moved": false,
+      "content_type": "text/html",
+      "words": 595
+    },
+    {
+      "name": "OpenRouter",
+      "address": "https://openrouter.ai/",
+      "outcome": "spare",
+      "file": "OpenRouter.md",
+      "how": "fetch",
+      "page_address": "https://openrouter.ai/",
+      "moved": false,
+      "content_type": "text/markdown",
+      "words": 599
+    },
+    {
+      "name": "Amazon Bedrock",
+      "address": "https://aws.amazon.com/bedrock/",
+      "outcome": "spare",
+      "file": "Amazon Bedrock.md",
+      "how": "fetch",
+      "page_address": "https://aws.amazon.com/bedrock/",
+      "moved": false,
+      "content_type": "text/markdown",
+      "words": 600
+    },
+    {
+      "name": "Apache APISIX",
+      "address": "https://apisix.apache.org/",
+      "outcome": "not needed"
+    },
+    {
+      "name": "Envoy AI Gateway",
+      "address": "https://aigateway.envoyproxy.io/",
+      "outcome": "not needed"
+    },
+    {
+      "name": "FastRouter",
+      "address": "https://fastrouter.ai/",
+      "outcome": "not needed"
+    }
+  ],
+  "facts_dropped": []
+}
